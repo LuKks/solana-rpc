@@ -1,0 +1,33 @@
+{
+  "name": "like-solana",
+  "version": "0.0.0",
+  "description": "Solana network wrapper to interact with accounts and programs",
+  "main": "index.js",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "test": "standard && brittle test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lukks/like-solana.git"
+  },
+  "author": "Lucas Barrena (LuKks)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lukks/like-solana/issues"
+  },
+  "homepage": "https://github.com/lukks/like-solana#readme",
+  "devDependencies": {
+    "brittle": "^3.3.2",
+    "standard": "^17.1.0"
+  },
+  "dependencies": {
+    "like-fetch": "^2.3.2",
+    "like-retry": "^1.1.1",
+    "streamx": "^2.22.0",
+    "ws": "^8.18.1",
+    "xache": "^1.2.1"
+  }
+}
