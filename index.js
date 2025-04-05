@@ -16,6 +16,8 @@ module.exports = class Solana {
     this.urls = Array.isArray(opts.url) ? opts.url : [opts.url || API_URL]
 
     this.onAgent = opts.onAgent || null
+
+    this.commitment = opts.commitment || 'finalized'
   }
 
   connect () {
@@ -32,7 +34,7 @@ module.exports = class Solana {
 
   async getSlot (opts = {}) {
     return this.request('getSlot', [
-      { commitment: opts.commitment || 'finalized' }
+      { commitment: opts.commitment || this.commitment }
     ])
   }
 
@@ -41,11 +43,13 @@ module.exports = class Solana {
   }
 
   async getBlock (blockNumber, opts = {}) {
+    const commitment = opts.commitment || (this.commitment === 'processed' ? 'confirmed' : this.commitment)
+
     return this.request('getBlock', [
       blockNumber,
       {
         encoding: opts.encoding || 'json',
-        commitment: opts.commitment || 'finalized', // 'processed' is not supported
+        commitment, // Commitment 'processed' is not supported
         transactionDetails: opts.transactionDetails || 'full',
         maxSupportedTransactionVersion: 0
       }
@@ -67,10 +71,13 @@ module.exports = class Solana {
   }
 
   async getTransaction (signature, opts = {}) {
+    const commitment = opts.commitment || (this.commitment === 'processed' ? 'confirmed' : this.commitment)
+
     return this.request('getTransaction', [
       signature,
       {
         encoding: opts.encoding || 'json',
+        commitment, // Commitment 'processed' is not supported
         maxSupportedTransactionVersion: 0
       }
     ])
@@ -80,11 +87,21 @@ module.exports = class Solana {
     return this.request('getSignaturesForAddress', [
       address,
       {
-        commitment: opts.commitment || 'finalized',
+        commitment: opts.commitment || this.commitment,
         minContextSlot: opts.minContextSlot,
         limit: opts.limit || 1000,
         before: opts.before, // I.e. signature
         until: opts.until
+      }
+    ])
+  }
+
+  async getAccountInfo (address, opts = {}) {
+    return this.request('getAccountInfo', [
+      address,
+      {
+        encoding: opts.encoding || 'base64',
+        commitment: opts.commitment || this.commitment
       }
     ])
   }
