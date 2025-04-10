@@ -70,6 +70,17 @@ module.exports = class Solana {
     return Promise.all(reqs)
   }
 
+  async sendTransaction (tx, opts = {}) {
+    return this.request('sendTransaction', [
+      maybeEncodeTransaction(tx),
+      {
+        encoding: opts.encoding || 'base64',
+        skipPreflight: true,
+        preflightCommitment: 'confirmed'
+      }
+    ])
+  }
+
   async getTransaction (signature, opts = {}) {
     const commitment = opts.commitment || (this.commitment === 'processed' ? 'confirmed' : this.commitment)
 
@@ -137,6 +148,8 @@ module.exports = class Solana {
   }
 
   async api (body) {
+    let error = null
+
     for await (const backoff of retry({ max: 3, delay: 1000, strategy: 'linear' })) {
       try {
         const response = await fetch(this._url(), {
@@ -151,7 +164,8 @@ module.exports = class Solana {
 
         if (response.status === 402) {
           // Proxy error probably
-          throw new Error('Payment required')
+          error = new Error('Payment required')
+          break
         }
 
         const data = await response.json()
@@ -162,7 +176,13 @@ module.exports = class Solana {
             continue
           }
 
-          throw new Error(data.error.message)
+          if (data.error.code === -32602) {
+            error = new Error(data.error.message + (data.error.data ? (': ' + data.error.data) : ''))
+            break
+          }
+
+          error = new Error(data.error.message)
+          break
         }
 
         return data
@@ -170,6 +190,8 @@ module.exports = class Solana {
         await backoff(err)
       }
     }
+
+    throw error || new Error('Unknown error')
   }
 
   _url () {
@@ -289,6 +311,17 @@ class BlockStream extends Readable {
 
     return promise
   }
+}
+
+function maybeEncodeTransaction (tx) {
+  if (typeof tx === 'object' && tx && tx.serialize) {
+    const serialized = tx.serialize()
+    const encoded = Buffer.from(serialized).toString('base64')
+
+    return encoded
+  }
+
+  return tx
 }
 
 function noop () {}
