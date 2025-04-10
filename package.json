@@ -1,6 +1,6 @@
 {
   "name": "like-solana",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Solana network wrapper to interact with accounts and programs",
   "main": "index.js",
   "files": [
