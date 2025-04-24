@@ -95,10 +95,12 @@ module.exports = class Solana {
   }
 
   async getSignaturesForAddress (address, opts = {}) {
+    const commitment = opts.commitment || (this.commitment === 'processed' ? 'confirmed' : this.commitment)
+
     return this.request('getSignaturesForAddress', [
       address,
       {
-        commitment: opts.commitment || this.commitment,
+        commitment,
         minContextSlot: opts.minContextSlot,
         limit: opts.limit || 1000,
         before: opts.before, // I.e. signature
