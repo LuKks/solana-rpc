@@ -119,6 +119,24 @@ module.exports = class Solana {
     ])
   }
 
+  async logsSubscribe (mentions, opts = {}) {
+    if (!Array.isArray(mentions)) mentions = [mentions]
+
+    for await (const backoff of retry({ max: 5 })) {
+      const id = await this.send('logsSubscribe', [
+        { mentions },
+        { commitment: opts.commitment || this.commitment }
+      ])
+
+      if (!id) {
+        await backoff(new Error('Failed to subscribe'))
+        continue
+      }
+
+      return id
+    }
+  }
+
   async request (method, params) {
     const data = await this.api({
       jsonrpc: '2.0',
