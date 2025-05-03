@@ -119,6 +119,29 @@ module.exports = class Solana {
     ])
   }
 
+  async getBalance (owner, opts = {}) {
+    return this.request('getBalance', [
+      owner,
+      {
+        commitment: opts.commitment || this.commitment
+      }
+    ])
+  }
+
+  async getTokenAccountsByOwner (owner, opts = {}) {
+    return this.request('getTokenAccountsByOwner', [
+      owner,
+      {
+        mint: opts.mint,
+        programId: opts.programId
+      },
+      {
+        commitment: opts.commitment || this.commitment,
+        encoding: opts.encoding || 'json'
+      }
+    ])
+  }
+
   async logsSubscribe (mentions, opts = {}) {
     if (!Array.isArray(mentions)) mentions = [mentions]
 
