@@ -15,6 +15,7 @@ module.exports = class Solana {
     this._urlIndex = 0
     this.urls = Array.isArray(opts.url) ? opts.url : [opts.url || API_URL]
 
+    this.agent = opts.agent || null
     this.onAgent = opts.onAgent || null
 
     this.commitment = opts.commitment || 'finalized'
@@ -201,7 +202,7 @@ module.exports = class Solana {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(body),
-          agent: this.onAgent ? this.onAgent() : null,
+          agent: this.onAgent ? this.onAgent() : (this.agent || null),
           timeout: 30000
         })
 
