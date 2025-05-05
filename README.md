@@ -1,15 +1,15 @@
-# like-solana
+# solana-rpc
 
 Solana network wrapper to interact with accounts and programs
 
 ```
-npm i like-solana
+npm i solana-rpc
 ```
 
 ## Usage
 
 ```js
-const Solana = require('like-solana')
+const Solana = require('solana-rpc')
 
 const solana = new Solana()
 

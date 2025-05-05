@@ -1,20 +1,20 @@
 const test = require('brittle')
-const Solana = require('./index.js')
+const SolanaRPC = require('./index.js')
 
 test('basic http', async function (t) {
-  const solana = new Solana()
+  const rpc = new SolanaRPC()
 
-  const slot = await solana.getSlot()
+  const slot = await rpc.getSlot()
 
   t.is(typeof slot, 'number')
 })
 
 test('basic websocket', async function (t) {
-  const solana = new Solana()
+  const rpc = new SolanaRPC()
 
-  await solana.connect()
+  await rpc.connect()
 
-  const subscription = await solana.send('slotSubscribe')
+  const subscription = await rpc.send('slotSubscribe')
 
   t.is(typeof subscription, 'number')
 
@@ -22,30 +22,30 @@ test('basic websocket', async function (t) {
 
   lc.plan(1)
 
-  solana.socket.on('message', function onMessage (msg) {
+  rpc.socket.on('message', function onMessage (msg) {
     if (msg.method === 'slotNotification' && msg.params.subscription === subscription) {
-      solana.socket.removeListener('message', onMessage)
+      rpc.socket.removeListener('message', onMessage)
       lc.pass()
     }
   })
 
   await lc
 
-  const unsubscribed = await solana.send('slotUnsubscribe', [subscription])
+  const unsubscribed = await rpc.send('slotUnsubscribe', [subscription])
 
   t.is(unsubscribed, true)
 
-  await solana.disconnect()
+  await rpc.disconnect()
 })
 
 test('read blocks - start and end', async function (t) {
-  const solana = new Solana()
-  const currentSlot = await solana.getSlot()
+  const rpc = new SolanaRPC()
+  const currentSlot = await rpc.getSlot()
 
   t.comment('Starting slot:', currentSlot - 5)
   t.comment('Ending slot:', currentSlot)
 
-  const readStream = solana.createBlockStream({
+  const readStream = rpc.createBlockStream({
     start: currentSlot - 5,
     end: currentSlot
   })
@@ -56,12 +56,12 @@ test('read blocks - start and end', async function (t) {
 })
 
 test('read blocks - start without end (snapshot)', async function (t) {
-  const solana = new Solana()
-  const currentSlot = await solana.getSlot()
+  const rpc = new SolanaRPC()
+  const currentSlot = await rpc.getSlot()
 
   t.comment('Starting slot:', currentSlot - 5)
 
-  const readStream = solana.createBlockStream({
+  const readStream = rpc.createBlockStream({
     start: currentSlot - 5
   })
 
@@ -71,13 +71,13 @@ test('read blocks - start without end (snapshot)', async function (t) {
 })
 
 test.skip('read blocks - start without end (live)', async function (t) {
-  const solana = new Solana()
+  const rpc = new SolanaRPC()
 
-  const currentSlot = await solana.getSlot()
+  const currentSlot = await rpc.getSlot()
 
   t.comment('Starting slot:', currentSlot)
 
-  const readStream = solana.createBlockStream({
+  const readStream = rpc.createBlockStream({
     start: currentSlot,
     live: true
   })

@@ -4,21 +4,53 @@ const retry = require('like-retry')
 const Xache = require('xache')
 const HubSocket = require('./lib/hub-socket.js')
 
-const API_URL = 'https://solana-rpc.publicnode.com'
-const API_WS = 'wss://solana-rpc.publicnode.com'
+const API_URL = 'solana-rpc.publicnode.com'
 
-module.exports = class Solana {
-  constructor (opts = {}) {
+module.exports = class SolanaRPC {
+  constructor (url, opts = {}) {
+    if (isOptions(url)) {
+      opts = url
+      url = opts.url || null
+    }
+
+    // Compat
+    if (typeof url === 'string' && typeof opts === 'string') {
+      opts = { commitment: opts }
+    }
+
+    if (!url) url = opts.url || process.env.SOLANA_RPC || API_URL
+    if (!Array.isArray(url)) url = [url]
+
+    url = url.filter(Boolean).map(url => url.includes('://') ? url : 'https://' + url)
+
+    const ws = opts.ws || url[0].replace(/^http/, 'ws')
+
     this.id = 1
-    this.socket = new HubSocket(opts.ws || API_WS)
 
     this._urlIndex = 0
-    this.urls = Array.isArray(opts.url) ? opts.url : [opts.url || API_URL]
+    this.urls = url
+
+    this.socket = new HubSocket(ws)
 
     this.agent = opts.agent || null
-    this.onAgent = opts.onAgent || null
-
     this.commitment = opts.commitment || 'finalized'
+  }
+
+  // Compat
+  static clusterApiUrl (cluster) {
+    const CLUSTERS = {
+      'mainnet-beta': 'api.mainnet-beta.solana.com',
+      testnet: 'api.testnet.solana.com',
+      devnet: 'api.devnet.solana.com'
+    }
+
+    const hostname = CLUSTERS[cluster || 'mainnet-beta']
+
+    if (!hostname) {
+      throw new Error('Unknown cluster: ' + cluster)
+    }
+
+    return 'https://' + hostname
   }
 
   connect () {
@@ -95,6 +127,27 @@ module.exports = class Solana {
     ])
   }
 
+  async confirmTransaction (signature, opts = {}) {
+    for (let i = 0; i < 30; i++) {
+      const tx = await this.getTransaction(signature, opts)
+
+      if (tx) {
+        if (tx.meta.err) {
+          // TODO
+          console.error(tx.meta.err)
+
+          throw new Error('Confirmation failed: ' + signature)
+        }
+
+        return tx
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
+
+    throw new Error('Confirmation timeout: ' + signature)
+  }
+
   async getSignaturesForAddress (address, opts = {}) {
     const commitment = opts.commitment || (this.commitment === 'processed' ? 'confirmed' : this.commitment)
 
@@ -111,26 +164,45 @@ module.exports = class Solana {
   }
 
   async getAccountInfo (address, opts = {}) {
-    return this.request('getAccountInfo', [
+    const result = await this.request('getAccountInfo', [
       address,
       {
         encoding: opts.encoding || 'base64',
         commitment: opts.commitment || this.commitment
       }
     ])
+
+    if (opts.encoding === 'jsonParsed') {
+      return result.value
+    }
+
+    return {
+      data: Buffer.from(result.value.data[0], result.value.data[1]),
+      executable: result.value.executable,
+      lamports: result.value.lamports,
+      owner: result.value.owner,
+      rentEpoch: result.value.rentEpoch,
+      space: result.value.space
+    }
+  }
+
+  async getParsedAccountInfo (address, opts = {}) {
+    return this.getAccountInfo(address, { ...opts, encoding: 'jsonParsed' })
   }
 
   async getBalance (owner, opts = {}) {
-    return this.request('getBalance', [
+    const result = await this.request('getBalance', [
       owner,
       {
         commitment: opts.commitment || this.commitment
       }
     ])
+
+    return result.value
   }
 
   async getTokenAccountsByOwner (owner, opts = {}) {
-    return this.request('getTokenAccountsByOwner', [
+    const result = await this.request('getTokenAccountsByOwner', [
       owner,
       {
         mint: opts.mint,
@@ -141,6 +213,16 @@ module.exports = class Solana {
         encoding: opts.encoding || 'json'
       }
     ])
+
+    return result.value
+  }
+
+  async getLatestBlockhash (opts = {}) {
+    const result = await this.request('getLatestBlockhash', [{
+      commitment: opts.commitment || this.commitment
+    }])
+
+    return result.value
   }
 
   async logsSubscribe (mentions, opts = {}) {
@@ -202,7 +284,7 @@ module.exports = class Solana {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(body),
-          agent: this.onAgent ? this.onAgent() : (this.agent || null),
+          agent: typeof this.agent === 'function' ? this.agent() : this.agent,
           timeout: 30000
         })
 
@@ -306,10 +388,21 @@ class BlockStream extends Readable {
     this._prefetchBlocks(this.start, end === -1 ? this.length : end)
 
     const slot = this.start++
-    const block = await this._getBlockWithCache(slot)
+    let block = null
 
-    if (!block) {
-      throw new Error('Block not available: ' + slot)
+    try {
+      block = await this._getBlockWithCache(slot)
+
+      // We actually allow null blocks if it was skipped as per the catch below
+      if (!block) {
+        throw new Error('Block not available: ' + slot)
+      }
+    } catch (err) {
+      if (err.message.includes('was skipped, or missing due to ledger jump to recent snapshot')) {
+        block = Symbol.for('solana-block-missing')
+      } else {
+        throw err
+      }
     }
 
     this.push(block)
@@ -366,6 +459,14 @@ function maybeEncodeTransaction (tx) {
   }
 
   return tx
+}
+
+function isOptions (opts) {
+  return typeof opts === 'object' && opts && !isBuffer(opts)
+}
+
+function isBuffer (value) {
+  return Buffer.isBuffer(value) || value instanceof Uint8Array
 }
 
 function noop () {}
