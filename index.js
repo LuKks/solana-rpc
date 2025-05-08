@@ -307,6 +307,12 @@ module.exports = class SolanaRPC {
             break
           }
 
+          if (data.error.code === -32701) {
+            // "no available nodes found for platform solana-rpc"
+            await backoff(new Error(data.error.message))
+            continue
+          }
+
           error = new Error(data.error.message)
           break
         }
