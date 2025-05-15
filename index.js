@@ -176,6 +176,10 @@ module.exports = class SolanaRPC {
       return result.value
     }
 
+    if (!result.value) {
+      return null
+    }
+
     return {
       data: Buffer.from(result.value.data[0], result.value.data[1]),
       executable: result.value.executable,
@@ -269,6 +273,12 @@ module.exports = class SolanaRPC {
     }
 
     const out = await this.socket.waitForMessage(msg => msg.id === id)
+
+    if (out.error) {
+      const err = new Error(out.error.message)
+      err.code = out.error.code
+      throw err
+    }
 
     return out.result
   }
