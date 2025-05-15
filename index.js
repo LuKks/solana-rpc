@@ -163,6 +163,36 @@ module.exports = class SolanaRPC {
     ])
   }
 
+  async getAllSignaturesForAddress (address, opts = {}) {
+    let before = opts.before || null
+
+    const all = []
+
+    while (true) {
+      const signatures = await this.getSignaturesForAddress(address, { limit: 1000, before })
+
+      if (signatures.length === 0) {
+        // TODO: Sometimes RPC might return 0 but it does have txs
+        // I think it might only happen when using 'before' so it's ok for now
+        break
+      }
+
+      all.push(...signatures)
+
+      before = signatures[signatures.length - 1].signature
+
+      if (signatures.length !== 1000) {
+        break
+      }
+
+      if (opts.max && all.length >= opts.max) {
+        break
+      }
+    }
+
+    return all
+  }
+
   async getAccountInfo (address, opts = {}) {
     const result = await this.request('getAccountInfo', [
       address,
