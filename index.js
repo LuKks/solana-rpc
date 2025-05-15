@@ -390,6 +390,8 @@ class BlockStream extends Readable {
     this.live = !!opts.live
 
     this.cache = new Xache({ maxSize: opts.prefetch || 30 })
+
+    this.slot = 0
   }
 
   _open (cb) {
@@ -443,6 +445,9 @@ class BlockStream extends Readable {
       if (!block) {
         throw new Error('Block not available: ' + slot)
       }
+
+      // Due skipped/missing blocks you can't rely on parentSlot
+      block.slot = slot
     } catch (err) {
       if (err.message.includes('was skipped, or missing due to ledger jump to recent snapshot')) {
         block = Symbol.for('solana-block-missing')
