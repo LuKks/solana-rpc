@@ -1,7 +1,6 @@
 const { Readable } = require('streamx')
 const fetch = require('like-fetch')
 const retry = require('like-retry')
-const Xache = require('xache')
 const HubSocket = require('./lib/hub-socket.js')
 
 const API_URL = 'solana-rpc.publicnode.com'
@@ -391,7 +390,8 @@ class BlockStream extends Readable {
 
     this.getBlock = opts.getBlock || noopAsync
 
-    this.cache = new Xache({ maxSize: opts.prefetch || 30 })
+    this.inflight = new Map()
+    this.concurrency = opts.concurrency || 20
 
     this.slot = 0
   }
@@ -435,7 +435,7 @@ class BlockStream extends Readable {
       return
     }
 
-    this._prefetchBlocks(this.start, end === -1 ? this.length : end)
+    this._maybePrefetch()
 
     const slot = this.start++
     let block = null
@@ -461,32 +461,30 @@ class BlockStream extends Readable {
     this.push(block)
   }
 
-  _prefetchBlocks (start, end) {
-    for (let i = start; i <= end; i++) {
-      // Only prefetch concurrently blocks up to max size
-      const size = [...this.cache].length
+  _maybePrefetch () {
+    if (this.inflight.length >= 100) {
+      return
+    }
 
-      if (size >= this.cache.maxSize) {
-        break
+    const max = Math.min(this.end === -1 ? this.length : this.end, this.concurrency)
+
+    for (let i = 0; i < max; i++) {
+      const slot = this.start + i
+
+      if (!this.inflight.has(slot)) {
+        this._getBlockWithCache(slot, true).catch(noop)
       }
-
-      // Skip if already cached
-      if (this.cache.has(i)) {
-        continue
-      }
-
-      this._getBlockWithCache(i, true).catch(noop)
     }
   }
 
   async _getBlockWithCache (slot) {
     // Shift value if exists
-    if (this.cache.has(slot)) {
-      const promise = this.cache.get(slot)
+    if (this.inflight.has(slot)) {
+      const promise = this.inflight.get(slot)
 
       promise.catch(noop)
 
-      this.cache.delete(slot)
+      this.inflight.delete(slot)
 
       return promise
     }
@@ -494,10 +492,12 @@ class BlockStream extends Readable {
     // Fetch
     const promise = this.getBlock(slot).then(block => block || this.solana.getBlock(slot))
 
-    promise.catch(noop)
+    promise.catch(noop).finally(() => {
+      this._maybePrefetch()
+    })
 
     // Save
-    this.cache.set(slot, promise)
+    this.inflight.set(slot, promise)
 
     return promise
   }

@@ -70,7 +70,7 @@ test('read blocks - start without end (snapshot)', async function (t) {
   }
 })
 
-test.skip('read blocks - start without end (live)', async function (t) {
+test.skip('read blocks - start without end (live)', { timeout: 5 * 60 * 1000 }, async function (t) {
   const rpc = new SolanaRPC()
 
   const currentSlot = await rpc.getSlot()
@@ -78,12 +78,18 @@ test.skip('read blocks - start without end (live)', async function (t) {
   t.comment('Starting slot:', currentSlot)
 
   const readStream = rpc.createBlockStream({
-    start: currentSlot,
+    start: currentSlot - 10000,
     live: true
   })
 
   for await (const block of readStream) {
-    t.comment('Block', block.parentSlot + 1, '/', readStream.length, 'Missing', readStream.length - (block.parentSlot + 1))
+    if (block === Symbol.for('solana-block-missing')) {
+      continue
+    }
+
+    const missing = readStream.length - block.slot
+
+    t.comment('Block', block.parentSlot + 1, '/', readStream.length, 'Missing', missing)
   }
 
   t.comment('Done')
