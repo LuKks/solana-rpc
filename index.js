@@ -389,6 +389,8 @@ class BlockStream extends Readable {
     this.snapshot = !opts.live && opts.snapshot !== false
     this.live = !!opts.live
 
+    this.getBlock = opts.getBlock || noopAsync
+
     this.cache = new Xache({ maxSize: opts.prefetch || 30 })
 
     this.slot = 0
@@ -490,7 +492,7 @@ class BlockStream extends Readable {
     }
 
     // Fetch
-    const promise = this.solana.getBlock(slot)
+    const promise = this.getBlock(slot).then(block => block || this.solana.getBlock(slot))
 
     promise.catch(noop)
 
@@ -521,3 +523,5 @@ function isBuffer (value) {
 }
 
 function noop () {}
+
+async function noopAsync () {}
