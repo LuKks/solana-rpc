@@ -391,7 +391,7 @@ class BlockStream extends Readable {
     this.getBlock = opts.getBlock || noopAsync
 
     this.inflight = new Map()
-    this.concurrency = opts.concurrency || 20
+    this.concurrency = opts.prefetch || 20
 
     this.slot = 0
   }
