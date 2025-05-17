@@ -164,6 +164,10 @@ const liveStream = solana.createBlockStream({
 })
 
 for await (const block of liveStream) {
+  if (block === Symbol.for('solana-block-missing')) {
+    continue
+  }
+
   // ...
 }
 ```
