@@ -353,6 +353,20 @@ module.exports = class SolanaRPC {
           }
 
           error = new Error(data.error.message)
+          error.code = data.error.code
+
+          break
+        }
+
+        if (data.code && data.message) {
+          if (data.code === -32007) {
+            await backoff(new Error(data.message))
+            continue
+          }
+
+          error = new Error(data.message)
+          error.code = data.code
+
           break
         }
 
