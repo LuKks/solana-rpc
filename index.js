@@ -451,7 +451,7 @@ class BlockStream {
     this.slot = 0
   }
 
-  [Symbol.asyncIterator]() {
+  [Symbol.asyncIterator] () {
     return this._stream()
   }
 
