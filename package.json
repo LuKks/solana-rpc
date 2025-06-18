@@ -1,6 +1,6 @@
 {
   "name": "solana-rpc",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "Solana network wrapper to interact with accounts and programs",
   "main": "index.js",
   "files": [
