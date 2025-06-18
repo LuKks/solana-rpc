@@ -32,6 +32,8 @@ module.exports = class SolanaRPC {
 
     this.agent = opts.agent || null
     this.commitment = opts.commitment || 'finalized'
+
+    this._subscriptions = new Map()
   }
 
   // Compat
@@ -257,14 +259,9 @@ module.exports = class SolanaRPC {
     return result.value
   }
 
-  async logsSubscribe (mentions, opts = {}) {
-    if (!Array.isArray(mentions)) mentions = [mentions]
-
+  async _subscribe (method, params) {
     for await (const backoff of retry({ max: 5 })) {
-      const id = await this.send('logsSubscribe', [
-        { mentions },
-        { commitment: opts.commitment || this.commitment }
-      ])
+      const id = await this.send(method, params)
 
       if (!id) {
         await backoff(new Error('Failed to subscribe'))
@@ -273,6 +270,53 @@ module.exports = class SolanaRPC {
 
       return id
     }
+  }
+
+  async logsSubscribe (mentions, opts = {}) {
+    if (!Array.isArray(mentions)) mentions = [mentions]
+
+    const id = await this._subscribe('logsSubscribe', [
+      { mentions },
+      { commitment: opts.commitment || this.commitment }
+    ])
+
+    return id
+  }
+
+  async onAccountChange (address, cb, opts = {}) {
+    const id = await this._subscribe('accountSubscribe', [
+      address,
+      {
+        commitment: opts.commitment || this.commitment,
+        encoding: opts.encoding || 'base64'
+      }
+    ])
+
+    this.socket.on('message', onMessage)
+
+    this._subscriptions.set(id, onMessage)
+
+    return id
+
+    function onMessage (msg) {
+      if (msg.method === 'accountNotification' && msg.params.subscription === id) {
+        cb(msg.params.result.value, msg.params.result.context)
+      }
+    }
+  }
+
+  async accountUnsubscribe (id) {
+    const onMessage = this._subscriptions.get(id)
+
+    if (!onMessage) {
+      throw new Error('Subscription not found: ' + id)
+    }
+
+    this._subscriptions.delete(id)
+
+    this.socket.removeListener('message', onMessage)
+
+    await this.send('accountUnsubscribe', [id])
   }
 
   async request (method, params) {

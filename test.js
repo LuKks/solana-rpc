@@ -38,6 +38,24 @@ test('basic websocket', async function (t) {
   await rpc.disconnect()
 })
 
+test.skip('on account change', async function (t) {
+  t.plan(1)
+
+  const rpc = new SolanaRPC()
+
+  await rpc.connect()
+
+  const poolAddress = 'AMb79jvh2q7F8RRheMWp8VcWAnMj1bgzWqhKbMpXniE5'
+
+  const subscriptionId = await rpc.onAccountChange(poolAddress, function (accountInfo, context) {
+    t.comment(accountInfo, context)
+  })
+
+  // ...
+
+  await rpc.accountUnsubscribe(subscriptionId)
+})
+
 test('read blocks - start and end', async function (t) {
   const rpc = new SolanaRPC()
   const currentSlot = await rpc.getSlot()
