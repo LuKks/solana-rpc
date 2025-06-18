@@ -1,4 +1,3 @@
-const { Readable } = require('streamx')
 const fetch = require('like-fetch')
 const retry = require('like-retry')
 const HubSocket = require('./lib/hub-socket.js')
@@ -390,10 +389,8 @@ module.exports = class SolanaRPC {
   }
 }
 
-class BlockStream extends Readable {
+class BlockStream {
   constructor (solana, opts = {}) {
-    super()
-
     this.solana = solana
 
     this.start = opts.start || 0
@@ -410,12 +407,22 @@ class BlockStream extends Readable {
     this.slot = 0
   }
 
-  _open (cb) {
-    this._openp().then(cb, cb)
+  [Symbol.asyncIterator]() {
+    return this._stream()
   }
 
-  _read (cb) {
-    this._readp().then(cb, cb)
+  async * _stream () {
+    await this._openp()
+
+    while (true) {
+      const block = await this._readp()
+
+      if (block === -1) {
+        return
+      }
+
+      yield block
+    }
   }
 
   async _openp () {
@@ -445,8 +452,7 @@ class BlockStream extends Readable {
     const end = this.live ? -1 : (this.end === -1 ? this.length : this.end)
 
     if (end >= 0 && this.start >= end) {
-      this.push(null)
-      return
+      return -1
     }
 
     this._maybePrefetch()
@@ -472,7 +478,7 @@ class BlockStream extends Readable {
       }
     }
 
-    this.push(block)
+    return block
   }
 
   _maybePrefetch () {
