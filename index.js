@@ -115,6 +115,8 @@ module.exports = class SolanaRPC {
 
     if (opts.confirmed) {
       await this.confirmTransaction(signature)
+    } else if (opts.finalized) {
+      await this.confirmTransaction(signature, { commitment: 'finalized' })
     }
 
     return signature
