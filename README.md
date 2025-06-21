@@ -6,6 +6,8 @@ Solana network wrapper to interact with accounts and programs
 npm i solana-rpc
 ```
 
+Need support? Join the community: https://lucasbarrena.com
+
 ## Usage
 
 ```js
