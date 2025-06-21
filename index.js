@@ -104,7 +104,7 @@ module.exports = class SolanaRPC {
   }
 
   async sendTransaction (tx, opts = {}) {
-    return this.request('sendTransaction', [
+    const signature = await this.request('sendTransaction', [
       maybeEncodeTransaction(tx),
       {
         encoding: opts.encoding || 'base64',
@@ -112,6 +112,12 @@ module.exports = class SolanaRPC {
         preflightCommitment: 'confirmed'
       }
     ])
+
+    if (opts.confirmed) {
+      await this.confirmTransaction(signature)
+    }
+
+    return signature
   }
 
   async getTransaction (signature, opts = {}) {
