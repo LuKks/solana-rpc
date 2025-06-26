@@ -11,29 +11,29 @@ Need support? Join the community: https://lucasbarrena.com
 ## Usage
 
 ```js
-const Solana = require('solana-rpc')
+const RPC = require('solana-rpc')
 
-const solana = new Solana()
+const rpc = new RPC()
 
-const result = await solana.request('getSlot', [{ commitment: 'finalized' }])
+const result = await rpc.request('getSlot', [{ commitment: 'processed' }])
 // => 325801337
 
-const slot = await solana.getSlot()
+const slot = await rpc.getSlot()
 // => 325801337
 
-const block = await solana.getBlock(slot)
+const block = await rpc.getBlock(slot)
 // => { parentSlot, blockTime, blockhash, previousBlockhash, ... }
 
 const exampleTx = block.transactions[0]
-const tx = await solana.getTransaction(exampleTx.transaction.signatures[0])
+const tx = await rpc.getTransaction(exampleTx.transaction.signatures[0])
 // => { meta, transaction, ... }
 ```
 
 HTTP-based real-time efficient stream of blocks!
 
 ```js
-const start = await solana.getSlot()
-const readStream = solana.createBlockStream({ start, live: true })
+const start = await rpc.getSlot()
+const readStream = rpc.createBlockStream({ start, live: true })
 
 for await (const block of readStream) {
   console.log('Block', block.parentSlot + 1, 'Txs', block.transactions.length)
@@ -43,29 +43,30 @@ for await (const block of readStream) {
 WebSocket example:
 
 ```js
-await solana.connect()
+await rpc.connect()
 
-const subscription = await solana.send('slotSubscribe')
+const subscription = await rpc.send('slotSubscribe')
 
-solana.socket.on('message', function (msg) {
+rpc.socket.on('message', function (msg) {
   console.log(msg)
 })
 
-await solana.send('slotUnsubscribe', [subscription])
+await rpc.send('slotUnsubscribe', [subscription])
 
-await solana.disconnect()
+await rpc.disconnect()
 ```
 
 ## API
 
-#### `solana = new Solana([options])`
+#### `rpc = new RPC([options])`
 
 Creates a new Solana instance to interact with the network.
 
 ```js
 {
   url: 'https://solana-rpc.publicnode.com',
-  ws: 'wss://solana-rpc.publicnode.com'
+  ws: 'wss://solana-rpc.publicnode.com',
+  commitment: 'processed' // 'confirmed' or 'finalized'
 }
 ```
 
@@ -73,13 +74,13 @@ There is `api.mainnet-beta.solana.com` but it's more rate-limited.
 
 ## HTTP API
 
-#### `result = await solana.request(method[, params])`
+#### `result = await rpc.request(method[, params])`
 
 Send a custom request with parameters.
 
 It automatically retries in case of failures.
 
-#### `slot = await solana.getSlot([options])`
+#### `slot = await rpc.getSlot([options])`
 
 Get the current slot.
 
@@ -87,11 +88,11 @@ Options:
 
 ```js
 {
-  commitment: 'finalized'
+  commitment
 }
 ```
 
-#### `block = await solana.getBlock(blockNumber)`
+#### `block = await rpc.getBlock(blockNumber)`
 
 Get a specific block.
 
@@ -100,18 +101,18 @@ Options:
 ```js
 {
   encoding: 'json',
-  commitment: 'finalized',
+  commitment, // 'confirmed' or 'finalized'
   transactionDetails: 'full'
 }
 ```
 
-#### `blocks = await solana.getBlocks(start, end[, options])`
+#### `blocks = await rpc.getBlocks(start, end[, options])`
 
 Get a range of blocks. Same options as `getBlock`.
 
 `end` is exclusive.
 
-#### `tx = await solana.getTransaction(signature[, options])`
+#### `tx = await rpc.getTransaction(signature[, options])`
 
 Get a full transaction by hash.
 
@@ -123,7 +124,7 @@ Options:
 }
 ```
 
-#### `signatures = await solana.getSignaturesForAddress(address[, options])`
+#### `signatures = await rpc.getSignaturesForAddress(address[, options])`
 
 Get a list of signatures by account address.
 
@@ -131,7 +132,7 @@ Options:
 
 ```js
 {
-  commitment: 'finalized',
+  commitment, // 'confirmed' or 'finalized'
   minContextSlot,
   limit: 1000,
   before, // I.e. a signature
@@ -139,7 +140,7 @@ Options:
 }
 ```
 
-#### `readStream = solana.createBlockStream(options)`
+#### `readStream = rpc.createBlockStream(options)`
 
 Get a range of blocks by a HTTP-based stream efficiently.
 
@@ -158,9 +159,9 @@ Options:
 Example of live reading without stopping:
 
 ```js
-const slot = await solana.getSlot()
+const slot = await rpc.getSlot()
 
-const liveStream = solana.createBlockStream({
+const liveStream = rpc.createBlockStream({
   start: slot,
   live: true
 })
@@ -176,17 +177,17 @@ for await (const block of liveStream) {
 
 ## WebSocket API
 
-#### `await solana.connect()`
+#### `await rpc.connect()`
 
 Open the WebSocket.
 
-#### `await solana.disconnect()`
+#### `await rpc.disconnect()`
 
 Close the WebSocket.
 
-#### `result = await solana.send(method, params[, options]) {
+#### `result = await rpc.send(method, params[, options])`
 
-Similar to `solana.request` but uses the WebSocket.
+Similar to `rpc.request` but uses the WebSocket.
 
 Options:
 
@@ -198,35 +199,35 @@ Options:
 
 Disabling `wait` makes it return `{ id }` instead of the `result`.
 
-#### `solana.socket.on('open', callback)`
+#### `rpc.socket.on('open', callback)`
 
 Event for when the socket is connected.
 
-#### `solana.socket.on('close', callback)`
+#### `rpc.socket.on('close', callback)`
 
 Event for when the socket is disconnected for any reason.
 
-Use this event to manually reconnect with `await solana.connect()`.
+Use this event to manually reconnect with `await rpc.connect()`.
 
 You will have to re-subscribe.
 
-#### `solana.socket.on('message', callback)`
+#### `rpc.socket.on('message', callback)`
 
 Listen for new messages in real-time.
 
-#### `solana.socket.on('error', callback)`
+#### `rpc.socket.on('error', callback)`
 
 Event for errors in the socket.
 
-#### `await solana.waitForMessage(callback)`
+#### `await rpc.waitForMessage(callback)`
 
 Wait for a specific message.
 
 Example:
 
 ```js
-const req = await solana.send('slotSubscribe', { wait: false })
-const result = await solana.waitForMessage(msg => msg.id === req.id)
+const req = await rpc.send('slotSubscribe', { wait: false })
+const result = await rpc.waitForMessage(msg => msg.id === req.id)
 ```
 
 ## License

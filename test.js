@@ -1,8 +1,8 @@
 const test = require('brittle')
-const SolanaRPC = require('./index.js')
+const RPC = require('./index.js')
 
 test('basic http', async function (t) {
-  const rpc = new SolanaRPC()
+  const rpc = new RPC()
 
   const slot = await rpc.getSlot()
 
@@ -10,7 +10,7 @@ test('basic http', async function (t) {
 })
 
 test('basic websocket', async function (t) {
-  const rpc = new SolanaRPC()
+  const rpc = new RPC()
 
   await rpc.connect()
 
@@ -41,7 +41,7 @@ test('basic websocket', async function (t) {
 test.skip('on account change', async function (t) {
   t.plan(1)
 
-  const rpc = new SolanaRPC()
+  const rpc = new RPC()
 
   await rpc.connect()
 
@@ -57,7 +57,7 @@ test.skip('on account change', async function (t) {
 })
 
 test('read blocks - start and end', async function (t) {
-  const rpc = new SolanaRPC()
+  const rpc = new RPC()
   const currentSlot = await rpc.getSlot()
 
   t.comment('Starting slot:', currentSlot - 5)
@@ -74,7 +74,7 @@ test('read blocks - start and end', async function (t) {
 })
 
 test('read blocks - start without end (snapshot)', async function (t) {
-  const rpc = new SolanaRPC()
+  const rpc = new RPC()
   const currentSlot = await rpc.getSlot()
 
   t.comment('Starting slot:', currentSlot - 5)
@@ -89,7 +89,7 @@ test('read blocks - start without end (snapshot)', async function (t) {
 })
 
 test.skip('read blocks - start without end (live)', { timeout: 5 * 60 * 1000 }, async function (t) {
-  const rpc = new SolanaRPC()
+  const rpc = new RPC()
 
   const currentSlot = await rpc.getSlot()
 

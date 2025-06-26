@@ -31,7 +31,7 @@ module.exports = class SolanaRPC {
     this.socket = new HubSocket(ws)
 
     this.agent = opts.agent || null
-    this.commitment = opts.commitment || 'finalized'
+    this.commitment = opts.commitment || 'processed'
 
     this._subscriptions = new Map()
   }
