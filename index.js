@@ -267,6 +267,23 @@ module.exports = class SolanaRPC {
     return result.value
   }
 
+  async getTokenAccountsByOwner (owner, filter = {}, opts = {}) {
+    const result = await this.request('getTokenAccountsByOwner', [
+      owner,
+      {
+        ...filter,
+        programId: filter.programId || 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
+      },
+      {
+        commitment: opts.commitment || this.commitment,
+        encoding: opts.encoding || 'base64',
+        ...opts
+      }
+    ])
+
+    return result.value
+  }
+
   async _subscribe (method, params) {
     for await (const backoff of retry({ max: 5 })) {
       const id = await this.send(method, params)
