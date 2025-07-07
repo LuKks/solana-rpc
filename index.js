@@ -291,6 +291,35 @@ module.exports = class SolanaRPC {
     return id
   }
 
+  async blockSubscribe (mentions, opts = {}) {
+    const commitment = opts.commitment || (this.commitment === 'processed' ? 'confirmed' : this.commitment)
+
+    let params = null
+
+    if (mentions === 'all') {
+      params = 'all'
+    } else if (mentions && typeof mentions === 'object' && mentions.mentionsAccountOrProgram) {
+      params = mentions
+    } else if (mentions && typeof mentions === 'string') {
+      params = { mentionsAccountOrProgram: mentions }
+    } else {
+      throw new Error('Param is required')
+    }
+
+    const id = await this._subscribe('blockSubscribe', [
+      params,
+      {
+        commitment,
+        encoding: opts.encoding || 'json',
+        transactionDetails: opts.transactionDetails || 'full',
+        maxSupportedTransactionVersion: 0,
+        showRewards: true
+      }
+    ])
+
+    return id
+  }
+
   async onAccountChange (address, cb, opts = {}) {
     const id = await this._subscribe('accountSubscribe', [
       address,
