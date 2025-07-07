@@ -243,43 +243,30 @@ module.exports = class SolanaRPC {
     return result.value
   }
 
-  async getTokenAccountsByOwner (owner, opts = {}) {
+  async getTokenAccountsByOwner (owner, filter = {}, opts = {}) {
     const result = await this.request('getTokenAccountsByOwner', [
       owner,
       {
-        mint: opts.mint,
-        programId: opts.programId
+        mint: filter.mint,
+        programId: filter.programId
       },
       {
         commitment: opts.commitment || this.commitment,
-        encoding: opts.encoding || 'json'
+        encoding: opts.encoding || 'base64'
       }
     ])
 
     return result.value
+  }
+
+  async getParsedTokenAccountsByOwner (owner, filter = {}, opts = {}) {
+    return this.getTokenAccountsByOwner(owner, filter, { ...opts, encoding: 'jsonParsed' })
   }
 
   async getLatestBlockhash (opts = {}) {
     const result = await this.request('getLatestBlockhash', [{
       commitment: opts.commitment || this.commitment
     }])
-
-    return result.value
-  }
-
-  async getTokenAccountsByOwner (owner, filter = {}, opts = {}) {
-    const result = await this.request('getTokenAccountsByOwner', [
-      owner,
-      {
-        ...filter,
-        programId: filter.programId || 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
-      },
-      {
-        commitment: opts.commitment || this.commitment,
-        encoding: opts.encoding || 'base64',
-        ...opts
-      }
-    ])
 
     return result.value
   }
