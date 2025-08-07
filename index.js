@@ -556,7 +556,10 @@ class BlockStream {
       // Due skipped/missing blocks you can't rely on parentSlot
       block.slot = slot
     } catch (err) {
-      if (err.message.includes('was skipped, or missing due to ledger jump to recent snapshot')) {
+      // E.g. "Slot 123 was skipped, or missing due to ledger jump to recent snapshot"
+      // E.g. "Slot 123 was skipped, or missing in long-term storage"
+
+      if (err.message.includes('was skipped, or missing')) {
         block = Symbol.for('solana-block-missing')
       } else {
         throw err
