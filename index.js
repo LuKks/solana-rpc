@@ -273,14 +273,25 @@ module.exports = class SolanaRPC {
 
   async _subscribe (method, params) {
     for await (const backoff of retry({ max: 5 })) {
-      const id = await this.send(method, params)
+      try {
+        const id = await this.send(method, params)
 
-      if (!id) {
-        await backoff(new Error('Failed to subscribe'))
-        continue
+        if (!id) {
+          await backoff(new Error('Failed to subscribe'))
+          continue
+        }
+
+        return id
+      } catch (err) {
+        // Some RPC incorrectly reports invalid params when it's actually correct
+        // Error: Invalid params: unknown variant `commitment`, expected one of `all`, `allWithVotes`, `mentions`.
+        if (err.code === -32602) {
+          await backoff(err)
+          continue
+        }
+
+        throw err
       }
-
-      return id
     }
   }
 
