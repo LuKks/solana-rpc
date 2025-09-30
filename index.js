@@ -447,6 +447,12 @@ module.exports = class SolanaRPC {
             continue
           }
 
+          if (data.error.code === -32504) {
+            // Request timed out
+            await backoff(new Error(data.error.message))
+            continue
+          }
+
           error = new Error(data.error.message)
           error.code = data.error.code
 
